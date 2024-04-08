@@ -48,4 +48,3 @@ pip install aiogram python-dotenv
 - `utils/`: директория с вспомогательными функциями и классами.
 - `state/`: директория с состояниями для FSM (finite state machine).
 - `keyboards/`: директория с клавиатурами для бота.
-- `config/`: директория с файлами конфигурации.
