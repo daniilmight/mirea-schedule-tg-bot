@@ -1,7 +1,9 @@
 from aiogram import Bot, Router, F  # Импортируем классы Bot, Router и F из библиотеки aiogram
 from aiogram.filters import Command  # Импортируем фильтр Command из библиотеки aiogram.filters
-from aiogram.types import Message  # Импортируем тип данных Message из библиотеки aiogram.types
+from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.enums import ParseMode
+from aiogram.types.input_file import FSInputFile
+
 
 from keyboards.for_questions import get_yes_no_kb  # Импортируем клавиатуру для вопросов
 from keyboards.for_register import register_keyboard  # Импортируем клавиатуру для регистрации
@@ -132,3 +134,26 @@ async def broadcast_message(message: Message, command: Command, bot: Bot):
                 await bot.send_message(user_id, (message.text[(message.text.find(' ')+1)::]))
     else:
         await bot.send_message(message.from_user.id, f"У вас нет прав использовать эту команду")
+
+@router.message(Command("dbase"))
+async def db_message(message: Message, bot: Bot):
+    admin = os.getenv('ADMIN_ID')
+    if int(admin) == int(message.from_user.id):
+        document = FSInputFile(os.getenv('DATABASE_NAME'))
+        await bot.send_document(admin, document)
+    else:
+        await bot.send_message(message.from_user.id, f"У вас нет прав использовать эту команду")
+
+
+@router.message(Command("reregister"))
+async def cmd_reregister(message: Message, bot: Bot):
+    db = Database(os.getenv('DATABASE_NAME'))
+    telegram_id = message.from_user.id
+    user_data = db.select_user_id(telegram_id)  # Получаем информацию о пользователе из базы данных
+    if user_data:  # Если пользователь найден в базе данных
+        db.delete_user(telegram_id)  # Удаляем пользователя из базы данных
+        await bot.send_message(telegram_id, "Ваши данные были удалены из базы данных. Вы можете зарегистрироваться заново.",
+                               reply_markup=register_keyboard)  # Отправляем сообщение пользователю об удалении его данных
+    else:
+        await bot.send_message(telegram_id, "Ваши данные уже удалены из базы данных или вы не были зарегистрированы ранее.",
+                               reply_markup=register_keyboard)  # Отправляем сообщение пользователю, если его данных уже нет в базе данных или он не был зарегистрирован ранее

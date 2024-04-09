@@ -44,6 +44,11 @@ class Database():
         self.cursor.execute("SELECT telegram_id FROM users")
         users = self.cursor.fetchall()
         return [user[0] for user in users]
+    
+    def delete_user(self, telegram_id):
+        # Удаление пользователя из базы данных по telegram_id
+        self.cursor.execute("DELETE FROM users WHERE telegram_id = ?", (telegram_id,))
+        self.connection.commit()  # Фиксируем изменения в базе данных
 
     def __del__(self):
         # Закрытие соединения с базой данных при удалении объекта
