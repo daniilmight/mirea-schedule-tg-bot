@@ -32,89 +32,112 @@ async def cmd_start(message: Message, bot: Bot):  # Обработчик ком�
 
 @router.message(F.text.lower() == "узнать расписание на сегодня")  # Декоратор для обработки текста "узнать расписание на сегодня"
 async def today_schedule(message: Message, bot: Bot):  # Обработчик запроса на получение расписания на сегодня
-    msktime =  datetime.now() + timedelta(hours=3)  # Получаем текущее время в Московском часовом поясе
-    day_of_week = msktime.strftime('%A')  # Определяем текущий день недели
-
-    # Определение четности и номера недели
-    week_parity, week_number = get_week_parity_and_number(start_date, msktime)
-
-    # Формирование расписания на текущий день с выбором подгруппы
     db = Database(os.getenv('DATABASE_NAME'))  # Инициализируем подключение к базе данных
-    num = int(db.select_user_num(message.from_user.id))  # Получаем номер подгруппы пользователя из базы данных
-    if num == 1:  # Если пользователь принадлежит к первой подгруппе
-        schedule_text = get_schedule_first_group(day_of_week, week_parity, week_number)  # Получаем расписание для первой подгруппы
-    elif num == 2:  # Если пользователь принадлежит ко второй подгруппе
-        schedule_text = get_schedule_second_group(day_of_week, week_parity, week_number)  # Получаем расписание для второй подгруппы
+    user_data = db.select_user_id(message.from_user.id)  # Получаем информацию о пользователе из базы данных
 
-    await bot.send_message(message.from_user.id, schedule_text, parse_mode=ParseMode.HTML)  # Отправляем пользователю расписание на сегодня
+    if user_data:  # Если пользователь найден в базе данных
+        msktime = datetime.now() + timedelta(hours=3)  # Получаем текущее время в Московском часовом поясе
+        day_of_week = msktime.strftime('%A')  # Определяем текущий день недели
+
+        # Определение четности и номера недели
+        week_parity, week_number = get_week_parity_and_number(start_date, msktime)
+
+        num = int(db.select_user_num(message.from_user.id))  # Получаем номер подгруппы пользователя из базы данных
+        if num == 1:  # Если пользователь принадлежит к первой подгруппе
+            schedule_text = get_schedule_first_group(day_of_week, week_parity, week_number)  # Получаем расписание для первой подгруппы
+        elif num == 2:  # Если пользователь принадлежит ко второй подгруппе
+            schedule_text = get_schedule_second_group(day_of_week, week_parity, week_number)  # Получаем расписание для второй подгруппы
+
+        await bot.send_message(message.from_user.id, schedule_text, parse_mode=ParseMode.HTML)  # Отправляем пользователю расписание на сегодня
+    else:
+        await bot.send_message(message.from_user.id, "Вас нет в базе данных. Скорее всего, бот обновился, и ваши данные были стерты. Пройдите регистрацию заново.",
+                               reply_markup=register_keyboard)  # Отправляем сообщение пользователю о том, что его данных уже нет в базе данных или он не был зарегистрирован ранее
 
 # Аналогичные обработчики для остальных команд ("узнать расписание на завтра", "узнать расписание на неделю", "узнать расписание на следущую неделю")...
 
 @router.message(F.text.lower() == "узнать расписание на завтра")
 async def tomorow_schedule(message: Message, bot: Bot):
-    msktime =  datetime.now() + timedelta(days=1) + timedelta(hours=3)
-    day_of_week = msktime.strftime('%A')
-
-    # Определение четности и номера недели
-    week_parity, week_number = get_week_parity_and_number(start_date, msktime)
-
-    # Формирование расписания на текущий день с выбором подгруппы
     db = Database(os.getenv('DATABASE_NAME'))
-    num = int(db.select_user_num(message.from_user.id))
-    if(num==1):
-        schedule_text = get_schedule_first_group(day_of_week, week_parity, week_number)
-    elif(num==2):
-        schedule_text = get_schedule_second_group(day_of_week, week_parity, week_number)
+    user_data = db.select_user_id(message.from_user.id)  # Получаем информацию о пользователе из базы данных
 
-    await bot.send_message(message.from_user.id,schedule_text, parse_mode=ParseMode.HTML)
+    if user_data:  # Если пользователь найден в базе данных
+        msktime = datetime.now() + timedelta(days=1) + timedelta(hours=3)
+        day_of_week = msktime.strftime('%A')
+
+        # Определение четности и номера недели
+        week_parity, week_number = get_week_parity_and_number(start_date, msktime)
+
+        num = int(db.select_user_num(message.from_user.id))
+        if num == 1:
+            schedule_text = get_schedule_first_group(day_of_week, week_parity, week_number)
+        elif num == 2:
+            schedule_text = get_schedule_second_group(day_of_week, week_parity, week_number)
+
+        await bot.send_message(message.from_user.id, schedule_text, parse_mode=ParseMode.HTML)
+    else:
+        await bot.send_message(message.from_user.id, "Вас нет в базе данных. Скорее всего, бот обновился, и ваши данные были стерты. Пройдите регистрацию заново.",
+                               reply_markup=register_keyboard)
+
 
 @router.message(F.text.lower() == "узнать расписание на неделю")
 async def week_schedule(message: Message, bot: Bot):
-    msktime =  datetime.now() + timedelta(hours=3)
-    day_of_week = msktime.strftime('%A')
+    db = Database(os.getenv('DATABASE_NAME'))  # Инициализируем подключение к базе данных
+    user_data = db.select_user_id(message.from_user.id)  # Получаем информацию о пользователе из базы данных
 
-    # Определение четности и номера недели
-    week_parity, week_number = get_week_parity_and_number(start_date, msktime)
+    if user_data:  # Если пользователь найден в базе данных
+        msktime = datetime.now() + timedelta(hours=3)
+        day_of_week = msktime.strftime('%A')
 
-    db = Database(os.getenv('DATABASE_NAME'))
-    num = int(db.select_user_num(message.from_user.id))
+        # Определение четности и номера недели
+        week_parity, week_number = get_week_parity_and_number(start_date, msktime)
 
-    # Формирование расписания на всю неделю
-    week_schedule_text = ''
-    if(num==1):
-        for day_of_week in day_names.keys():
-            schedule_text = get_schedule_first_group(day_of_week, week_parity, week_number)
-            week_schedule_text += f'\n\n{schedule_text}'
-    elif(num==2):
-        for day_of_week in day_names.keys():
-            schedule_text = get_schedule_second_group(day_of_week, week_parity, week_number)
-            week_schedule_text += f'\n\n{schedule_text}'
+        num = int(db.select_user_num(message.from_user.id))
 
-    await bot.send_message(message.from_user.id,week_schedule_text, parse_mode=ParseMode.HTML)
+        # Формирование расписания на всю неделю
+        week_schedule_text = ''
+        if num == 1:
+            for day_of_week in day_names.keys():
+                schedule_text = get_schedule_first_group(day_of_week, week_parity, week_number)
+                week_schedule_text += f'\n\n{schedule_text}'
+        elif num == 2:
+            for day_of_week in day_names.keys():
+                schedule_text = get_schedule_second_group(day_of_week, week_parity, week_number)
+                week_schedule_text += f'\n\n{schedule_text}'
 
-@router.message(F.text.lower() == "узнать расписание на следущую неделю")
-async def week_schedule(message: Message, bot: Bot):
-    msktime =  datetime.now() + timedelta(days=7) + timedelta(hours=3)
-    day_of_week = msktime.strftime('%A')
+        await bot.send_message(message.from_user.id, week_schedule_text, parse_mode=ParseMode.HTML)
+    else:
+        await bot.send_message(message.from_user.id, "Вас нет в базе данных. Скорее всего, бот обновился, и ваши данные были стерты. Пройдите регистрацию заново.",
+                               reply_markup=register_keyboard)
 
-    # Определение четности и номера недели
-    week_parity, week_number = get_week_parity_and_number(start_date, msktime)
+@router.message(F.text.lower() == "узнать расписание на следующую неделю")
+async def next_week_schedule(message: Message, bot: Bot):
+    db = Database(os.getenv('DATABASE_NAME'))  # Инициализируем подключение к базе данных
+    user_data = db.select_user_id(message.from_user.id)  # Получаем информацию о пользователе из базы данных
 
-    db = Database(os.getenv('DATABASE_NAME'))
-    num = int(db.select_user_num(message.from_user.id))
+    if user_data:  # Если пользователь найден в базе данных
+        msktime = datetime.now() + timedelta(days=7) + timedelta(hours=3)
+        day_of_week = msktime.strftime('%A')
 
-    # Формирование расписания на всю неделю
-    week_schedule_text = ''
-    if(num==1):
-        for day_of_week in day_names.keys():
-            schedule_text = get_schedule_first_group(day_of_week, week_parity, week_number)
-            week_schedule_text += f'\n\n{schedule_text}'
-    elif(num==2):
-        for day_of_week in day_names.keys():
-            schedule_text = get_schedule_second_group(day_of_week, week_parity, week_number)
-            week_schedule_text += f'\n\n{schedule_text}'
+        # Определение четности и номера недели
+        week_parity, week_number = get_week_parity_and_number(start_date, msktime)
 
-    await bot.send_message(message.from_user.id,week_schedule_text, parse_mode=ParseMode.HTML)
+        num = int(db.select_user_num(message.from_user.id))
+
+        # Формирование расписания на всю неделю
+        week_schedule_text = ''
+        if num == 1:
+            for day_of_week in day_names.keys():
+                schedule_text = get_schedule_first_group(day_of_week, week_parity, week_number)
+                week_schedule_text += f'\n\n{schedule_text}'
+        elif num == 2:
+            for day_of_week in day_names.keys():
+                schedule_text = get_schedule_second_group(day_of_week, week_parity, week_number)
+                week_schedule_text += f'\n\n{schedule_text}'
+
+        await bot.send_message(message.from_user.id, week_schedule_text, parse_mode=ParseMode.HTML)
+    else:
+        await bot.send_message(message.from_user.id, "Вас нет в базе данных. Скорее всего, бот обновился, и ваши данные были стерты. Пройдите регистрацию заново.",
+                               reply_markup=register_keyboard)
 
 @router.message(Command("imessage"))
 async def broadcast_message(message: Message, command: Command, bot: Bot):
